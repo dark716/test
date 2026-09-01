@@ -3,5 +3,6 @@
   "stage": "review_complete",
   "revision": 1,
   "review_status": "FAIL",
-  "next_action": "revise_from_review"
+  "next_action": "revise_from_review",
+  "sync_token": "trigger-01"
 }
