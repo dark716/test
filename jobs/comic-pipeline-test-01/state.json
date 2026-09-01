@@ -1,0 +1,7 @@
+{
+  "job_id": "comic-pipeline-test-01",
+  "stage": "review_complete",
+  "revision": 1,
+  "review_status": "FAIL",
+  "next_action": "revise_from_review"
+}
