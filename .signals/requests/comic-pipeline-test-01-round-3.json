@@ -1,0 +1,22 @@
+{
+  "signal": "GEMINI_REVIEW_REQUEST",
+  "job_id": "comic-pipeline-test-01",
+  "review_round": 3,
+  "revision": 2,
+  "source_material_status": "SOURCE 자료가 Drive JOB 폴더에 없음; Drive JOB_STATE의 BRIEF와 CURRENT DRAFT만 사용",
+  "brief": {
+    "audience": "초등학교 3학년",
+    "topic": "호흡기관과 산소의 이동",
+    "learning_goal": "폐의 역할과 산소가 몸에 전달되는 과정을 정확히 설명한다.",
+    "format": "4컷 학습만화 콘티",
+    "style": "쉽고 짧은 대화 중심"
+  },
+  "review_policy": {
+    "fact_accuracy": "사실 오류와 잘못된 인과관계를 확인한다.",
+    "misconception_risk": "단순화가 핵심 개념을 왜곡하는지 확인한다.",
+    "learning_goal": "학습 목표가 실제로 전달되는지 확인한다.",
+    "audience_fit": "초등학교 3학년이 이해할 수 있는지 확인한다.",
+    "decision_rule": "critical 또는 major 문제가 하나라도 있으면 FAIL, 그렇지 않고 목표를 충족하면 PASS"
+  },
+  "candidate_output": "1컷: 민수: \"숨을 들이마시면 산소가 폐로 들어와!\"\n2컷: 지우: \"폐에서는 산소가 어떻게 피로 가?\" 민수: \"폐포에서 산소가 피로 이동해.\"\n3컷: 선생님: \"산소를 받은 피는 온몸으로 이동해.\"\n4컷: 지우: \"그래서 우리가 움직일 수 있구나!\""
+}
