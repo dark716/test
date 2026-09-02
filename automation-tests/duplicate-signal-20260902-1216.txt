@@ -1,0 +1,2 @@
+Duplicate signal idempotency probe for JOB 20260902-oxygen-02.
+Expected: no state transition, no revision increase, no duplicate output.
