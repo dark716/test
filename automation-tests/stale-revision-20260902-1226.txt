@@ -1,0 +1,2 @@
+Stale candidate_revision stability probe for JOB 20260902-stability-01.
+Expected: reject REVIEW_RESULT candidate_revision=1 while JOB_STATE revision=2; no draft/status/output mutation except diagnostic log.
