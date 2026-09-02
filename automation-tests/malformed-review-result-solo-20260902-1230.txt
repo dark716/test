@@ -1,0 +1,2 @@
+Standalone malformed REVIEW_RESULT stability probe for JOB 20260902-stability-02.
+Expected: missing candidate_revision is rejected; draft, status, revision, and output remain unchanged except diagnostic logging.

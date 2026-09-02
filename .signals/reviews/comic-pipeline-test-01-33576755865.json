@@ -1,0 +1,22 @@
+{
+  "signal": "GEMINI_REVIEW_COMPLETE",
+  "job_id": "comic-pipeline-test-01",
+  "source_request_commit": "75b01ef0bdb339157c8836cdd9c13c46d9f6805e",
+  "source_run_id": 33576755865,
+  "reviewer_model": "gemini-3.6-flash",
+  "review": {
+    "status": "FAIL",
+    "summary": "4컷에서 폐가 산소를 만들어 낸다는 심각한 사실 오류가 발견되었으며, 이는 출처 자료의 핵심 설명과 상충됩니다.",
+    "issues": [
+      {
+        "severity": "major",
+        "category": "사실 오류 및 오개념 발생",
+        "location": "4컷",
+        "problem": "숨이의 대사 중 '폐가 산소를 만들어 혈액으로 보내 줘!'는 폐가 산소를 만드는 기관이 아니라는 출처 자료 내용에 반하는 명백한 사실 오류입니다.",
+        "required_fix": "폐가 산소를 직접 만드는 것이 아니라, 들이마신 공기 속 산소를 혈액으로 전달하고 이산화탄소를 배출하는 기체 교환이 일어난다는 내용으로 수정해야 합니다.",
+        "confidence": "high"
+      }
+    ],
+    "overall_confidence": "high"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "job_id": "comic-pipeline-test-01",
+  "stage": "review_requested",
+  "revision": 1,
+  "review_status": "PENDING",
+  "next_action": "wait_for_gemini",
+  "sync_token": "closed-loop-test-01"
+}

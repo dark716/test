@@ -1,0 +1,2 @@
+Malformed review signal probe.
+Expected: parser rejects signal and Drive remains unchanged.

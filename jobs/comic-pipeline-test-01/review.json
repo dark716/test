@@ -1,0 +1,14 @@
+{
+  "reviewer": "fake_gemini",
+  "status": "FAIL",
+  "issues": [
+    {
+      "location": "4컷",
+      "severity": "major",
+      "category": "misconception",
+      "problem": "폐가 산소를 만든다고 표현되어 있음",
+      "reason": "폐는 산소를 만들어내지 않는다. 들이마신 공기 속 산소가 폐포에서 혈액으로 이동하는 기체교환이 일어난다.",
+      "recommended_fix": "폐포에서 공기 속 산소가 혈액으로 이동한다고 수정한다."
+    }
+  ]
+}

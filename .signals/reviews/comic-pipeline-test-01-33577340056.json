@@ -1,0 +1,31 @@
+{
+  "signal": "GEMINI_REVIEW_COMPLETE",
+  "job_id": "comic-pipeline-test-01",
+  "review_round": 1,
+  "source_request_commit": "f0bd237062a51a3687aff2fa08023e72ff071aa2",
+  "source_run_id": 33577340056,
+  "reviewer_model": "gemini-3.6-flash",
+  "review": {
+    "status": "FAIL",
+    "summary": "4컷 내용 중 폐가 산소를 만들어낸다는 치명적인 사실 오류가 포함되어 있고, 학습 목표의 핵심 요소인 폐포의 역할이 누락되어 검수를 통과하지 못했습니다.",
+    "issues": [
+      {
+        "severity": "critical",
+        "category": "내용 오류",
+        "location": "4컷",
+        "problem": "숨이가 '폐가 산소를 만들어 혈액으로 보내 줘!'라고 말하는데, 이는 출처 자료의 '폐는 산소를 만들어 내는 기관이 아니다'라는 명시적 사실과 직접 충돌하며 잘못된 과학적 오개념을 전달합니다.",
+        "required_fix": "폐가 산소를 생성하는 것이 아니라 들이마신 공기에 포함된 산소가 혈액으로 전달된다는 내용으로 수정해야 합니다.",
+        "confidence": "high"
+      },
+      {
+        "severity": "major",
+        "category": "학습 목표 미달성",
+        "location": "4컷 전체",
+        "problem": "학습 목표인 '기관, 기관지, 폐와 폐포의 관계를 오해 없이 이해하게 한다'와 달리 폐포(작은 공기주머니) 및 기체 교환 개념이 원고에서 완전히 누락되었습니다.",
+        "required_fix": "폐 안에 있는 폐포에서 산소와 이산화탄소가 교환된다는 설명을 추가하여 학습 목표를 달성해야 합니다.",
+        "confidence": "high"
+      }
+    ],
+    "overall_confidence": "high"
+  }
+}
