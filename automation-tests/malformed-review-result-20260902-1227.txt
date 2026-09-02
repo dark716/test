@@ -1,0 +1,2 @@
+Malformed REVIEW_RESULT stability probe for JOB 20260902-stability-02.
+Expected: reject result because required candidate_revision is missing; no draft/status/output mutation except diagnostic log.
