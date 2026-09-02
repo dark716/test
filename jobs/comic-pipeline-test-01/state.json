@@ -1,8 +1,8 @@
 {
   "job_id": "comic-pipeline-test-01",
-  "stage": "review_complete",
+  "stage": "review_requested",
   "revision": 1,
-  "review_status": "FAIL",
-  "next_action": "revise_from_review",
-  "sync_token": "commit-trigger-probe-03"
+  "review_status": "PENDING",
+  "next_action": "wait_for_gemini",
+  "sync_token": "real-gemini-test-01"
 }
