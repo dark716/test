@@ -12,13 +12,16 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - name: Process Gemini review request
+      - name: Process Gemini review request from Drive
         uses: actions/github-script@v7
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON }}
+          DRIVE_JOBS_FOLDER_ID: ${{ secrets.DRIVE_JOBS_FOLDER_ID }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const crypto = require('crypto');
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const pr = context.payload.pull_request;
@@ -30,15 +33,74 @@ jobs:
               return;
             }
 
-            const match = message.match(/JOB_ID:\s*([A-Za-z0-9._-]+)/);
-            if (!match) return core.setFailed('Missing valid JOB_ID.');
-            const jobId = match[1];
+            const field = name => message.match(new RegExp(`^${name}:\\\\s*([A-Za-z0-9._-]+)`, 'mi'))?.[1];
+            const jobId = field('JOB_ID');
+            const requestSignalId = field('SIGNAL_ID');
+            const signaledRound = Number(field('REVIEW_ROUND'));
+            if (!jobId || !requestSignalId || !Number.isInteger(signaledRound)) {
+              return core.setFailed('Missing JOB_ID, SIGNAL_ID, or REVIEW_ROUND.');
+            }
             if (!process.env.GEMINI_API_KEY) return core.setFailed('GEMINI_API_KEY is not configured.');
+            if (!process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON) return core.setFailed('GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON is not configured.');
+            if (!process.env.DRIVE_JOBS_FOLDER_ID) return core.setFailed('DRIVE_JOBS_FOLDER_ID is not configured.');
 
-            const requestPath = `jobs/${jobId}/review_request.json`;
-            const file = await github.rest.repos.getContent({ owner, repo, path: requestPath, ref: pr.head.ref });
-            if (Array.isArray(file.data) || !file.data.content) return core.setFailed(`Missing ${requestPath}`);
-            const reviewInput = JSON.parse(Buffer.from(file.data.content, 'base64').toString('utf8'));
+            const serviceAccount = JSON.parse(process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON);
+            const b64url = value => Buffer.from(value).toString('base64url');
+            const now = Math.floor(Date.now() / 1000);
+            const jwtHeader = b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+            const jwtClaim = b64url(JSON.stringify({
+              iss: serviceAccount.client_email,
+              scope: 'https://www.googleapis.com/auth/drive',
+              aud: 'https://oauth2.googleapis.com/token',
+              iat: now,
+              exp: now + 3600
+            }));
+            const signer = crypto.createSign('RSA-SHA256');
+            signer.update(`${jwtHeader}.${jwtClaim}`);
+            const assertion = `${jwtHeader}.${jwtClaim}.${signer.sign(serviceAccount.private_key, 'base64url')}`;
+            const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({
+                grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                assertion
+              })
+            });
+            if (!tokenRes.ok) return core.setFailed(`Drive auth failed: ${tokenRes.status} ${await tokenRes.text()}`);
+            const accessToken = (await tokenRes.json()).access_token;
+            const driveHeaders = { Authorization: `Bearer ${accessToken}` };
+            const escapeQ = value => value.replace(/'/g, "\\'");
+            const listDrive = async q => {
+              const url = new URL('https://www.googleapis.com/drive/v3/files');
+              url.searchParams.set('q', q);
+              url.searchParams.set('fields', 'files(id,name,mimeType,modifiedTime)');
+              url.searchParams.set('supportsAllDrives', 'true');
+              url.searchParams.set('includeItemsFromAllDrives', 'true');
+              const res = await fetch(url, { headers: driveHeaders });
+              if (!res.ok) throw new Error(`Drive list failed: ${res.status} ${await res.text()}`);
+              return (await res.json()).files || [];
+            };
+
+            const jobFolders = await listDrive(
+              `name='${escapeQ(jobId)}' and '${process.env.DRIVE_JOBS_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`
+            );
+            if (jobFolders.length !== 1) return core.setFailed(`Expected one Drive JOB folder for ${jobId}; found ${jobFolders.length}.`);
+            const jobFolderId = jobFolders[0].id;
+            const requestFiles = await listDrive(
+              `name='REVIEW_REQUEST.json' and '${jobFolderId}' in parents and trashed=false`
+            );
+            if (requestFiles.length !== 1) return core.setFailed(`Expected one REVIEW_REQUEST.json; found ${requestFiles.length}.`);
+            const requestRes = await fetch(
+              `https://www.googleapis.com/drive/v3/files/${requestFiles[0].id}?alt=media`,
+              { headers: driveHeaders }
+            );
+            if (!requestRes.ok) return core.setFailed(`Drive request read failed: ${requestRes.status} ${await requestRes.text()}`);
+            const reviewInput = await requestRes.json();
+
+            if (reviewInput.job_id !== jobId || reviewInput.signal_id !== requestSignalId ||
+                Number(reviewInput.review_round) !== signaledRound) {
+              return core.setFailed('Drive REVIEW_REQUEST does not match the GitHub signal.');
+            }
 
             const prompt = [
               'You are an independent educational-content reviewer.',
@@ -81,20 +143,14 @@ jobs:
             let data = null;
             let usedModel = null;
             let lastError = null;
-
             for (const model of models) {
               for (let attempt = 1; attempt <= 3; attempt++) {
-                core.info(`model=${model} attempt=${attempt}`);
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
                   body: JSON.stringify({
                     contents: [{ role: 'user', parts: [{ text: prompt }] }],
-                    generationConfig: {
-                      temperature: 0.2,
-                      responseMimeType: 'application/json',
-                      responseJsonSchema: schema
-                    }
+                    generationConfig: { temperature: 0.2, responseMimeType: 'application/json', responseJsonSchema: schema }
                   })
                 });
                 const text = await res.text();
@@ -109,28 +165,63 @@ jobs:
               }
               if (data) break;
             }
-
             if (!data) return core.setFailed(lastError || 'All Gemini review attempts failed.');
+
             const reviewText = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
             if (!reviewText) return core.setFailed('Gemini returned no review JSON.');
             const review = JSON.parse(reviewText);
-
-            const resultPath = `.signals/reviews/${jobId}-${context.runId}.json`;
+            const resultSignalId = crypto.randomUUID();
             const result = {
-              signal: 'GEMINI_REVIEW_COMPLETE',
+              schema_version: 1,
               job_id: jobId,
-              review_round: reviewInput.review_round,
+              request_signal_id: requestSignalId,
+              result_signal_id: resultSignalId,
+              review_round: signaledRound,
+              candidate_revision: reviewInput.candidate_revision,
               source_request_commit: pr.head.sha,
               source_run_id: context.runId,
               reviewer_model: usedModel,
               review
             };
 
+            const resultFiles = await listDrive(
+              `name='REVIEW_RESULT.json' and '${jobFolderId}' in parents and trashed=false`
+            );
+            if (resultFiles.length > 1) return core.setFailed(`Expected at most one REVIEW_RESULT.json; found ${resultFiles.length}.`);
+            const boundary = `codex-${crypto.randomUUID()}`;
+            const metadata = resultFiles.length ? {} : {
+              name: 'REVIEW_RESULT.json',
+              parents: [jobFolderId],
+              mimeType: 'application/json'
+            };
+            const body = [
+              `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`,
+              `--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(result, null, 2)}\r\n`,
+              `--${boundary}--`
+            ].join('');
+            const uploadUrl = resultFiles.length
+              ? `https://www.googleapis.com/upload/drive/v3/files/${resultFiles[0].id}?uploadType=multipart&supportsAllDrives=true`
+              : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true';
+            const uploadRes = await fetch(uploadUrl, {
+              method: resultFiles.length ? 'PATCH' : 'POST',
+              headers: { ...driveHeaders, 'Content-Type': `multipart/related; boundary=${boundary}` },
+              body
+            });
+            if (!uploadRes.ok) return core.setFailed(`Drive result write failed: ${uploadRes.status} ${await uploadRes.text()}`);
+
+            const signalPath = `.signals/${jobId}/${resultSignalId}.json`;
+            const signal = {
+              signal: 'GEMINI_REVIEW_COMPLETE',
+              job_id: jobId,
+              signal_id: resultSignalId,
+              request_signal_id: requestSignalId,
+              review_round: signaledRound
+            };
             await github.rest.repos.createOrUpdateFileContents({
               owner,
               repo,
-              path: resultPath,
-              message: `GEMINI_REVIEW_MARKER JOB_ID: ${jobId}`,
-              content: Buffer.from(JSON.stringify(result, null, 2), 'utf8').toString('base64'),
+              path: signalPath,
+              message: `GEMINI_REVIEW_COMPLETE\nJOB_ID: ${jobId}\nSIGNAL_ID: ${resultSignalId}\nREVIEW_ROUND: ${signaledRound}`,
+              content: Buffer.from(JSON.stringify(signal, null, 2), 'utf8').toString('base64'),
               branch: pr.head.ref
             });
