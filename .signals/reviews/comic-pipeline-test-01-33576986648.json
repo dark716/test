@@ -1,0 +1,31 @@
+{
+  "signal": "GEMINI_REVIEW_COMPLETE",
+  "job_id": "comic-pipeline-test-01",
+  "review_round": 1,
+  "source_request_commit": "db4733b65f0d6d0bbb260d078794e1bbe6c57f2d",
+  "source_run_id": 33576986648,
+  "reviewer_model": "gemini-3.7-flash",
+  "review": {
+    "status": "FAIL",
+    "summary": "후보 원고는 폐가 산소를 만들어 낸다는 명백한 과학적 사실 오류를 포함하고 있으며, 학습 목표에 명시된 핵심 요소인 '폐포'의 개념을 누락하였습니다. 따라서 정책에 따라 FAIL로 판정합니다.",
+    "issues": [
+      {
+        "severity": "critical",
+        "category": "fact_accuracy",
+        "location": "4컷",
+        "problem": "'폐가 산소를 만들어 혈액으로 보내 줘!'라는 대사는 폐가 산소를 생성하는 기관이 아니라는 출처 자료의 내용과 정면으로 배치되는 심각한 사실 오류이자 오개념을 유발합니다.",
+        "required_fix": "폐가 산소를 만드는 것이 아니라, 들이마신 공기 속의 산소를 혈액으로 전달한다는 내용으로 수정해야 합니다.",
+        "confidence": "high"
+      },
+      {
+        "severity": "major",
+        "category": "learning_goal",
+        "location": "4컷 전반",
+        "problem": "학습 목표인 '기관, 기관지, 폐와 폐포의 관계 이해' 중 '폐포'에 대한 설명이 완전히 누락되었습니다.",
+        "required_fix": "폐 속의 작은 공기주머니인 폐포에서 산소와 이산화탄소의 기체 교환이 일어난다는 내용을 4컷 등에 반영해야 합니다.",
+        "confidence": "high"
+      }
+    ],
+    "overall_confidence": "high"
+  }
+}
